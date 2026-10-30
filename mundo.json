@@ -1,8 +1,8 @@
 {
   "grilla_ancho": 20,
   "grilla_alto": 20,
-  "deposito_x": 10,
-  "deposito_y": 10,
+  "deposito_x": 0,
+  "deposito_y": 0,
   "hora_salida": "08:00",
   "tiempo_servicio": 5,
   "tiempo_carga": 10,

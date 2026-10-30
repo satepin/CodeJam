@@ -13,11 +13,11 @@ import { INDICE_DEPOSITO } from "./evaluador.js";
  */
 export function dosOpt(instancia, ruta) {
   const distancias = instancia.distancias;
-  let huboMejora = true;
+  let huboMejora = true; //ARREGLAR FEO
   while (huboMejora) {
     huboMejora = false;
     // recorrido completo, con el depósito al principio y al final
-    const recorrido = [INDICE_DEPOSITO, ...ruta, INDICE_DEPOSITO];
+    const recorrido = [INDICE_DEPOSITO, ...ruta, INDICE_DEPOSITO]; //MAS COMENTARIOS
     for (let posicionInicio = 1; posicionInicio < recorrido.length - 2; posicionInicio++) {
       for (let posicionFin = posicionInicio + 1; posicionFin < recorrido.length - 1; posicionFin++) {
         const anteriorAlInicio = recorrido[posicionInicio - 1];
@@ -26,7 +26,7 @@ export function dosOpt(instancia, ruta) {
         const siguienteAlFin = recorrido[posicionFin + 1];
         const ahorroDistancia =
           distancias[anteriorAlInicio][puntoInicio] + distancias[puntoFin][siguienteAlFin] -
-          distancias[anteriorAlInicio][puntoFin] - distancias[puntoInicio][siguienteAlFin];
+          distancias[anteriorAlInicio][puntoFin] - distancias[puntoInicio][siguienteAlFin]; //AGREGAR COMENTARIO MAS DESCRIPTIVO EN LINEA >:C
         if (ahorroDistancia > 0) {
           const tramoInvertido = recorrido.slice(posicionInicio, posicionFin + 1).reverse();
           recorrido.splice(posicionInicio, tramoInvertido.length, ...tramoInvertido);
@@ -170,7 +170,7 @@ export function recocidoSimulado(
         for (let izquierda = posicionInicio, derecha = posicionFin; izquierda < derecha; izquierda++, derecha--) {
           [ruta[izquierda], ruta[derecha]] = [ruta[derecha], ruta[izquierda]];
         }
-      };
+      };e 
       invertirTramo();
       deshacerMovida = invertirTramo;
     }

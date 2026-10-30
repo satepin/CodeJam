@@ -33,7 +33,7 @@ export function resolver(dataset, { segundos = 20, semilla = 1, mostrarProgreso 
     while (rutasIniciales.length < totalVehiculos) rutasIniciales.push([]);
     const solucionInicial = { rutasPorVehiculo: rutasIniciales, pedidosSinAsignar: [] };
     const costoInicial = instancia.costo(solucionInicial);
-
+      //mas comentarios uwu
     const resultado = recocidoSimulado(instancia, solucionInicial, {
       milisegundos: milisegundosPorCantidad,
       aleatorio,

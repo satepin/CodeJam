@@ -1,35 +1,56 @@
 #!/usr/bin/env node
-// QuickDrop — generador de planes de reparto.
-// Uso: node index.js <carpeta_dataset> [plan.json|plan.csv] [--segundos 20] [--semilla 1] [--reinicios 1] [--formato auto|json|csv]
+/**
+ * @file Programa principal: lee un dataset, busca un plan de reparto y lo escribe en JSON.
+ *
+ * Uso: node index.js <carpeta_dataset> [plan.json] [--segundos 20] [--semilla 1]
+ */
+import fs from "node:fs";
 import { cargarDataset } from "./src/cargar.js";
-import { resolver, aPlan } from "./src/solver.js";
-import { escribirPlan } from "./src/escribir.js";
+import { resolver, convertirAPlan } from "./src/solver.js";
 
-function args(argv) {
-  const pos = [], op = {};
-  for (let i = 0; i < argv.length; i++) {
-    if (argv[i].startsWith("--")) op[argv[i].slice(2)] = argv[++i];
-    else pos.push(argv[i]);
+/**
+ * Separa los argumentos de la línea de comandos en posicionales y opciones (--nombre valor).
+ * @param {string[]} listaArgumentos Argumentos recibidos (sin "node" ni el nombre del script).
+ * @returns {{posicionales: string[], opciones: Record<string, string>}} Argumentos separados.
+ */
+function leerArgumentos(listaArgumentos) {
+  const posicionales = [];
+  const opciones = {};
+  for (let posicion = 0; posicion < listaArgumentos.length; posicion++) {
+    const argumento = listaArgumentos[posicion];
+    if (argumento.startsWith("--")) {
+      opciones[argumento.slice(2)] = listaArgumentos[posicion + 1];
+      posicion++;
+    } else {
+      posicionales.push(argumento);
+    }
   }
-  return { pos, op };
+  return { posicionales, opciones };
 }
 
-const { pos, op } = args(process.argv.slice(2));
-if (pos.length < 1) {
-  console.error("Uso: node index.js <carpeta_dataset> [plan.json|plan.csv] [--segundos 20] [--semilla 1] [--reinicios 1] [--formato auto|json|csv]");
+const { posicionales, opciones } = leerArgumentos(process.argv.slice(2));
+if (posicionales.length < 1) {
+  console.error("Uso: node index.js <carpeta_dataset> [plan.json] [--segundos 20] [--semilla 1]");
   process.exit(1);
 }
-const [carpeta, salida = "plan.json"] = pos;
-const segundos = Number(op.segundos ?? 20);
-const semilla = Number(op.semilla ?? 1);
-const reinicios = Number(op.reinicios ?? 1);
+const [carpetaDataset, archivoSalida = "plan.json"] = posicionales;
 
-const dataset = cargarDataset(carpeta, op.formato ?? "auto");
-console.error(`Dataset: ${dataset.pedidos.length} pedidos, ${dataset.vehiculos.length} vehículos, depósito (${dataset.mundo.deposito_x},${dataset.mundo.deposito_y})`);
-const { inst, sol, costo } = resolver(dataset, { segundos, semilla, reinicios });
-const plan = aPlan(inst, sol);
-escribirPlan(plan, salida);
+const dataset = cargarDataset(carpetaDataset);
+console.error(
+  `Dataset: ${dataset.pedidos.length} pedidos, ${dataset.vehiculos.length} vehículos, ` +
+    `depósito (${dataset.mundo.deposito_x},${dataset.mundo.deposito_y})`
+);
 
-console.error(`\nCOSTO ESTIMADO: ${costo.total}`);
-console.error(`  distancia ${costo.dist} cuadras · ${costo.usados} vehículos · makespan ${costo.makespan} min · ${costo.fallas} fallas`);
-console.error(`Plan escrito en ${salida}`);
+const { instancia, solucion, detalle } = resolver(dataset, {
+  segundos: Number(opciones.segundos ?? 20),
+  semilla: Number(opciones.semilla ?? 1),
+});
+const plan = convertirAPlan(instancia, solucion);
+fs.writeFileSync(archivoSalida, JSON.stringify(plan, null, 2) + "\n");
+
+console.error(`\nCOSTO ESTIMADO: ${detalle.costoTotal}`);
+console.error(
+  `  distancia ${detalle.distanciaTotal} cuadras · ${detalle.cantidadVehiculosUsados} vehículos · ` +
+    `makespan ${detalle.makespanMinutos} min · ${detalle.cantidadFallas} fallas`
+);
+console.error(`Plan escrito en ${archivoSalida}`);

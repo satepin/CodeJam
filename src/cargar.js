@@ -1,8 +1,16 @@
-// Carga de datasets (JSON o CSV). Todo se lee del archivo `mundo`: nada hardcodeado.
+/**
+ * @file Carga de un dataset de QuickDrop desde sus tres archivos JSON
+ * (mundo.json, pedidos.json y vehiculos.json).
+ */
 import fs from "node:fs";
 import path from "node:path";
 
-export const DEFAULTS_MUNDO = {
+/**
+ * Valores por defecto del mundo, según ESPECIFICACION.md.
+ * Se usan cuando un campo falta, vale null o está vacío.
+ * @type {Record<string, number|string>}
+ */
+export const VALORES_POR_DEFECTO_MUNDO = {
   grilla_ancho: 20,
   grilla_alto: 20,
   deposito_x: 0,
@@ -17,65 +25,69 @@ export const DEFAULTS_MUNDO = {
   costo_por_falla: 200,
 };
 
-// "falta", null o "" significan lo mismo
-const vacio = (v) => v === undefined || v === null || v === "";
+/**
+ * @typedef {Object} Pedido
+ * @property {number} id   Identificador único del pedido.
+ * @property {number} x    Columna del cliente en la grilla.
+ * @property {number} y    Fila del cliente en la grilla.
+ * @property {number} peso Peso del paquete en kg.
+ */
 
-function parsearCSV(texto) {
-  const lineas = texto.replace(/^﻿/, "").split(/\r?\n/).filter((l) => l.trim() !== "");
-  if (lineas.length === 0) return [];
-  const sep = lineas[0].includes(";") && !lineas[0].includes(",") ? ";" : ",";
-  const cab = lineas[0].split(sep).map((s) => s.trim());
-  return lineas.slice(1).map((l) => {
-    const celdas = l.split(sep).map((s) => s.trim());
-    const fila = {};
-    cab.forEach((c, i) => (fila[c] = celdas[i] ?? ""));
-    return fila;
-  });
+/**
+ * @typedef {Object} Vehiculo
+ * @property {string} id Identificador del vehículo (por ejemplo "V1").
+ */
+
+/**
+ * @typedef {Object} Dataset
+ * @property {Record<string, number|string>} mundo Parámetros del mundo, con valores por defecto aplicados.
+ * @property {Pedido[]} pedidos     Lista de pedidos a entregar.
+ * @property {Vehiculo[]} vehiculos Lista de vehículos disponibles.
+ */
+
+/**
+ * Indica si un valor cuenta como "campo ausente" (falta, null o string vacío).
+ * @param {*} valor Valor leído del archivo.
+ * @returns {boolean} true si el campo debe considerarse ausente.
+ */
+function esCampoAusente(valor) {
+  return valor === undefined || valor === null || valor === "";
 }
 
-// Convierte strings numéricos a número; deja el resto como está
-function normalizarValor(v) {
-  if (typeof v !== "string") return v;
-  if (v.trim() === "") return "";
-  const n = Number(v);
-  return Number.isFinite(n) ? n : v;
+/**
+ * Lee y parsea un archivo JSON de la carpeta del dataset.
+ * @param {string} carpetaDataset Ruta de la carpeta del dataset.
+ * @param {string} nombreArchivo  Nombre sin extensión ("mundo", "pedidos" o "vehiculos").
+ * @returns {*} Contenido del archivo ya parseado.
+ */
+function leerJSON(carpetaDataset, nombreArchivo) {
+  const rutaArchivo = path.join(carpetaDataset, `${nombreArchivo}.json`);
+  return JSON.parse(fs.readFileSync(rutaArchivo, "utf8"));
 }
 
-function leerArchivo(carpeta, nombre, formato) {
-  const pj = path.join(carpeta, `${nombre}.json`);
-  const pc = path.join(carpeta, `${nombre}.csv`);
-  const usarCSV = formato === "csv" || (formato !== "json" && !fs.existsSync(pj) && fs.existsSync(pc));
-  if (usarCSV) return { tipo: "csv", datos: parsearCSV(fs.readFileSync(pc, "utf8")) };
-  return { tipo: "json", datos: JSON.parse(fs.readFileSync(pj, "utf8")) };
-}
-
-export function cargarDataset(carpeta, formato = "auto") {
-  // mundo
-  const m = leerArchivo(carpeta, "mundo", formato);
-  let crudo = m.datos;
-  if (m.tipo === "csv") {
-    crudo = {};
-    for (const f of m.datos) crudo[f.clave] = f.valor;
+/**
+ * Carga un dataset completo. Los campos del mundo que faltan toman su valor
+ * por defecto; los campos desconocidos se ignoran.
+ * @param {string} carpetaDataset Ruta de la carpeta con los tres archivos JSON.
+ * @returns {Dataset} Mundo, pedidos y vehículos listos para usar.
+ */
+export function cargarDataset(carpetaDataset) {
+  const mundoLeido = leerJSON(carpetaDataset, "mundo");
+  const mundo = { ...VALORES_POR_DEFECTO_MUNDO };
+  for (const nombreCampo of Object.keys(VALORES_POR_DEFECTO_MUNDO)) {
+    if (!esCampoAusente(mundoLeido[nombreCampo])) mundo[nombreCampo] = mundoLeido[nombreCampo];
   }
-  const mundo = { ...DEFAULTS_MUNDO };
-  for (const [k, v] of Object.entries(crudo)) {
-    if (!vacio(v)) mundo[k] = k === "hora_salida" ? String(v) : normalizarValor(v);
-  }
 
-  // pedidos: conservamos campos extra (los eventos pueden agregar ventanas, prioridad, etc.)
-  const pedidos = leerArchivo(carpeta, "pedidos", formato).datos.map((p) => {
-    const o = {};
-    for (const [k, v] of Object.entries(p)) o[k] = vacio(v) ? null : normalizarValor(v);
-    return o;
-  });
+  const pedidos = leerJSON(carpetaDataset, "pedidos").map((pedidoLeido) => ({
+    id: pedidoLeido.id,
+    x: pedidoLeido.x,
+    y: pedidoLeido.y,
+    peso: pedidoLeido.peso,
+  }));
 
-  // vehiculos: id como texto; campos extra se conservan
-  const vehiculos = leerArchivo(carpeta, "vehiculos", formato).datos.map((v) => {
-    const o = {};
-    for (const [k, val] of Object.entries(v)) o[k] = vacio(val) ? null : normalizarValor(val);
-    o.id = String(v.id);
-    return o;
-  });
+  const vehiculos = leerJSON(carpetaDataset, "vehiculos").map((vehiculoLeido) => ({
+    id: String(vehiculoLeido.id),
+  }));
 
   return { mundo, pedidos, vehiculos };
 }

@@ -23,6 +23,7 @@ export const VALORES_POR_DEFECTO_MUNDO = {
   costo_por_vehiculo: 60,
   costo_por_minuto_total: 1,
   costo_por_falla: 200,
+  costo_por_minuto_premium: 1,
 };
 
 /**
@@ -31,6 +32,7 @@ export const VALORES_POR_DEFECTO_MUNDO = {
  * @property {number} x    Columna del cliente en la grilla.
  * @property {number} y    Fila del cliente en la grilla.
  * @property {number} peso Peso del paquete en kg.
+ * @property {boolean} premium true si es un cliente premium (su demora suma costo). Si falta, es false.
  */
 
 /**
@@ -52,6 +54,20 @@ export const VALORES_POR_DEFECTO_MUNDO = {
  */
 function esCampoAusente(valor) {
   return valor === undefined || valor === null || valor === "";
+}
+
+/**
+ * Interpreta un campo booleano como lo hace el simulador oficial:
+ * acepta true/false, 1/0 y los textos "1", "true", "si", "sí", "verdadero" (y sus opuestos).
+ * Un campo ausente vale false.
+ * @param {*} valor Valor leído del archivo.
+ * @returns {boolean} El valor como booleano.
+ */
+function leerBooleano(valor) {
+  if (esCampoAusente(valor)) return false;
+  if (typeof valor === "boolean") return valor;
+  const textoNormalizado = String(valor).trim().toLowerCase();
+  return ["1", "true", "si", "sí", "verdadero"].includes(textoNormalizado);
 }
 
 /**
@@ -83,6 +99,7 @@ export function cargarDataset(carpetaDataset) {
     x: pedidoLeido.x,
     y: pedidoLeido.y,
     peso: pedidoLeido.peso,
+    premium: leerBooleano(pedidoLeido.premium),
   }));
 
   const vehiculos = leerJSON(carpetaDataset, "vehiculos").map((vehiculoLeido) => ({

@@ -51,6 +51,7 @@ fs.writeFileSync(archivoSalida, JSON.stringify(plan, null, 2) + "\n");
 console.error(`\nCOSTO ESTIMADO: ${detalle.costoTotal}`);
 console.error(
   `  distancia ${detalle.distanciaTotal} cuadras · ${detalle.cantidadVehiculosUsados} vehículos · ` +
-    `makespan ${detalle.makespanMinutos} min · ${detalle.cantidadFallas} fallas`
+    `makespan ${detalle.makespanMinutos} min · ${detalle.cantidadFallas} fallas · ` +
+    `espera premium ${detalle.minutosPremium} min`
 );
 console.error(`Plan escrito en ${archivoSalida}`);

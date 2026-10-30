@@ -13,11 +13,11 @@ import { INDICE_DEPOSITO } from "./evaluador.js";
  */
 export function dosOpt(instancia, ruta) {
   const distancias = instancia.distancias;
-  let huboMejora = true; //ARREGLAR FEO
+  let huboMejora = true;
   while (huboMejora) {
     huboMejora = false;
     // recorrido completo, con el depósito al principio y al final
-    const recorrido = [INDICE_DEPOSITO, ...ruta, INDICE_DEPOSITO]; //MAS COMENTARIOS
+    const recorrido = [INDICE_DEPOSITO, ...ruta, INDICE_DEPOSITO];
     for (let posicionInicio = 1; posicionInicio < recorrido.length - 2; posicionInicio++) {
       for (let posicionFin = posicionInicio + 1; posicionFin < recorrido.length - 1; posicionFin++) {
         const anteriorAlInicio = recorrido[posicionInicio - 1];
@@ -26,7 +26,7 @@ export function dosOpt(instancia, ruta) {
         const siguienteAlFin = recorrido[posicionFin + 1];
         const ahorroDistancia =
           distancias[anteriorAlInicio][puntoInicio] + distancias[puntoFin][siguienteAlFin] -
-          distancias[anteriorAlInicio][puntoFin] - distancias[puntoInicio][siguienteAlFin]; //AGREGAR COMENTARIO MAS DESCRIPTIVO EN LINEA >:C
+          distancias[anteriorAlInicio][puntoFin] - distancias[puntoInicio][siguienteAlFin];
         if (ahorroDistancia > 0) {
           const tramoInvertido = recorrido.slice(posicionInicio, posicionFin + 1).reverse();
           recorrido.splice(posicionInicio, tramoInvertido.length, ...tramoInvertido);
@@ -189,6 +189,11 @@ export function recocidoSimulado(
     }
   }
 
-  mejorSolucion.rutasPorVehiculo.forEach((ruta) => dosOpt(instancia, ruta));
-  return { solucion: mejorSolucion, costo: instancia.costo(mejorSolucion) };
+  // 2-opt final: solo mira distancia, así que se aplica únicamente si baja el costo total
+  // (con premium, acortar la ruta puede atrasar a un cliente premium y salir más caro).
+  const solucionConDosOpt = copiarSolucion(mejorSolucion);
+  solucionConDosOpt.rutasPorVehiculo.forEach((ruta) => dosOpt(instancia, ruta));
+  const costoConDosOpt = instancia.costo(solucionConDosOpt);
+  if (costoConDosOpt < mejorCosto) return { solucion: solucionConDosOpt, costo: costoConDosOpt };
+  return { solucion: mejorSolucion, costo: mejorCosto };
 }

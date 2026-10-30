@@ -39,9 +39,11 @@ export function resolver(dataset, { segundos = 20, semilla = 1, mostrarProgreso 
       aleatorio,
     });
     const detalle = instancia.detalleCosto(resultado.solucion);
+    // cantidadVehiculos es solo el punto de partida (sectores del barrido): el recocido
+    // puede vaciar rutas o llenar otras, así que la cantidad final puede ser distinta.
     mostrarProgreso(
-      `  ${cantidadVehiculos} vehículo(s): barrido+2opt=${costoInicial} -> recocido=${resultado.costo}` +
-        ` (usa ${detalle.cantidadVehiculosUsados}, ${detalle.cantidadFallas} fallas)`
+      `  arranque con ${cantidadVehiculos} sector(es): barrido+2opt=${costoInicial} -> recocido=${resultado.costo}` +
+        ` (termina usando ${detalle.cantidadVehiculosUsados} vehículo(s), ${detalle.cantidadFallas} fallas)`
     );
     if (!mejorResultado || resultado.costo < mejorResultado.costo) mejorResultado = resultado;
   }
@@ -52,7 +54,10 @@ export function resolver(dataset, { segundos = 20, semilla = 1, mostrarProgreso 
     temperaturaInicial: 8,
   });
   if (resultadoFinal.costo < mejorResultado.costo) mejorResultado = resultadoFinal;
-  mostrarProgreso(`  pulido final: ${mejorResultado.costo}`);
+  mostrarProgreso(
+    `  pulido final (sobre la mejor): ${mejorResultado.costo}` +
+      ` (usa ${instancia.detalleCosto(mejorResultado.solucion).cantidadVehiculosUsados} vehículo(s))`
+  );
 
   return {
     instancia,

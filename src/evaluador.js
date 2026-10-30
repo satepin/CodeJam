@@ -20,6 +20,8 @@ export const INDICE_DEPOSITO = 0;
  * @property {number} cantidadVehiculosUsados Vehículos con al menos un pedido.
  * @property {number} makespanMinutos    Minutos hasta que vuelve el último vehículo.
  * @property {number} cantidadFallas     Pedidos sin entregar.
+ * @property {number} minutosPremium     Suma, para cada premium entregado, de los minutos
+ *   desde la salida hasta que empieza su entrega.
  */
 
 /**
@@ -57,26 +59,37 @@ export class Instancia {
 
   /**
    * Recorre una ruta: sale del depósito, visita los pedidos en orden y vuelve.
+   * La entrega de cada pedido empieza apenas llega el vehículo y dura tiempo_servicio.
    * @param {number[]} ruta Índices de pedidos en orden de visita.
-   * @returns {{distanciaRuta: number, minutosRuta: number}} Cuadras recorridas y
-   *   minutos desde la salida hasta volver al depósito.
+   * @returns {{distanciaRuta: number, minutosRuta: number, minutosPremiumRuta: number}}
+   *   Cuadras recorridas, minutos desde la salida hasta volver al depósito y
+   *   suma de los minutos de llegada (desde la salida) a cada pedido premium.
    */
   recorrerRuta(ruta) {
+    const { min_por_cuadra: minutosPorCuadra, tiempo_servicio: tiempoServicio } = this.mundo;
     let distanciaRuta = 0;
+    let minutosDesdeSalida = 0;
+    let minutosPremiumRuta = 0;
     let indiceAnterior = INDICE_DEPOSITO;
     for (const indicePedido of ruta) {
-      distanciaRuta += this.distancias[indiceAnterior][indicePedido];
+      const cuadrasTramo = this.distancias[indiceAnterior][indicePedido];
+      distanciaRuta += cuadrasTramo;
+      minutosDesdeSalida += cuadrasTramo * minutosPorCuadra; // momento de llegada = inicio de la entrega
+      if (this.pedidos[indicePedido - 1].premium) minutosPremiumRuta += minutosDesdeSalida;
+      minutosDesdeSalida += tiempoServicio;
       indiceAnterior = indicePedido;
     }
-    distanciaRuta += this.distancias[indiceAnterior][INDICE_DEPOSITO];
-    const minutosRuta = distanciaRuta * this.mundo.min_por_cuadra + ruta.length * this.mundo.tiempo_servicio;
-    return { distanciaRuta, minutosRuta };
+    const cuadrasVuelta = this.distancias[indiceAnterior][INDICE_DEPOSITO];
+    distanciaRuta += cuadrasVuelta;
+    const minutosRuta = minutosDesdeSalida + cuadrasVuelta * minutosPorCuadra;
+    return { distanciaRuta, minutosRuta, minutosPremiumRuta };
   }
 
   /**
    * Calcula el costo de una solución con la fórmula oficial:
    * costo_por_cuadra × distancia + costo fijo por vehículo usado
-   * + costo_por_minuto_total × makespan + costo_por_falla × fallas.
+   * + costo_por_minuto_total × makespan + costo_por_falla × fallas
+   * + costo_por_minuto_premium × minutos de espera de los premium entregados.
    * @param {Solucion} solucion Solución a evaluar.
    * @returns {number} Costo total.
    */
@@ -94,19 +107,22 @@ export class Instancia {
     let distanciaTotal = 0;
     let makespanMinutos = 0;
     let cantidadVehiculosUsados = 0;
+    let minutosPremium = 0;
     for (const ruta of solucion.rutasPorVehiculo) {
       if (ruta.length === 0) continue; // un vehículo sin pedidos no se usa ni se cobra
-      const { distanciaRuta, minutosRuta } = this.recorrerRuta(ruta);
+      const { distanciaRuta, minutosRuta, minutosPremiumRuta } = this.recorrerRuta(ruta);
       cantidadVehiculosUsados++;
       distanciaTotal += distanciaRuta;
       makespanMinutos = Math.max(makespanMinutos, minutosRuta);
+      minutosPremium += minutosPremiumRuta;
     }
     const cantidadFallas = solucion.pedidosSinAsignar.length;
     const costoTotal =
       mundo.costo_por_cuadra * distanciaTotal +
       mundo.costo_por_vehiculo * cantidadVehiculosUsados +
       mundo.costo_por_minuto_total * makespanMinutos +
-      mundo.costo_por_falla * cantidadFallas;
-    return { costoTotal, distanciaTotal, cantidadVehiculosUsados, makespanMinutos, cantidadFallas };
+      mundo.costo_por_falla * cantidadFallas +
+      mundo.costo_por_minuto_premium * minutosPremium;
+    return { costoTotal, distanciaTotal, cantidadVehiculosUsados, makespanMinutos, cantidadFallas, minutosPremium };
   }
 }

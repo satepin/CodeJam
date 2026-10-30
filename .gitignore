@@ -1,1 +1,34 @@
+# Dependencias
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Variables de entorno
+.env
+.env.*
+!.env.example
+
+# Cobertura y builds
+coverage/
+dist/
+build/
+
+# Cachés
+.npm/
+.parcel-cache/
+.eslintcache
+
+# Archivos locales
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Archivos generados
 plan.json
+

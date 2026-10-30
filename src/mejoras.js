@@ -170,7 +170,7 @@ export function recocidoSimulado(
         for (let izquierda = posicionInicio, derecha = posicionFin; izquierda < derecha; izquierda++, derecha--) {
           [ruta[izquierda], ruta[derecha]] = [ruta[derecha], ruta[izquierda]];
         }
-      };e 
+      };
       invertirTramo();
       deshacerMovida = invertirTramo;
     }
